@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="플래너">
+<meta name="theme-color" content="#fafafb">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233d3d42'/%3E%3Ctext x='32' y='43' font-size='30' font-family='sans-serif' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
+<title>플래너 · Monthly / Weekly / Daily</title>
+<style>
+:root{
+  --paper:#ffffff;
+  --mist:#f6f6f7;
+  --mist2:#fafafb;
+  --line:#e4e4e7;
+  --faint:#efeff1;
+  --ink:#3d3d42;
+  --soft:#8f8f96;
+  --dim:#c4c4c9;
+  --spine-am:#dededf;
+  --spine-pm:#bcbcc1;
+  --spine-ev:#96969d;
+  --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,-apple-system,sans-serif;
+  background:var(--mist2);color:var(--ink);font-size:14px;line-height:1.5;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,textarea{font:inherit;color:inherit;border:none;outline:none;background:transparent}
+::placeholder{color:var(--dim)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--soft);outline-offset:-1px;border-radius:4px}
+
+/* ---------- header ---------- */
+header{
+  position:sticky;top:0;z-index:10;background:rgba(255,255,255,.92);backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:10px 18px;
+}
+.brand{display:flex;flex-direction:column;line-height:1.15;margin-right:4px}
+.brand b{font-size:15px;letter-spacing:.22em;font-weight:700}
+.brand span{font-size:10px;letter-spacing:.18em;color:var(--soft)}
+.tabs{display:flex;background:var(--mist);border:1px solid var(--line);border-radius:999px;padding:3px}
+.tabs button{padding:5px 16px;border-radius:999px;font-size:13px;color:var(--soft)}
+.tabs button.on{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06);font-weight:600}
+.nav{display:flex;align-items:center;gap:6px;margin-left:auto}
+.nav .arw{width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--soft)}
+.nav .arw:hover{color:var(--ink)}
+#ptitle{min-width:150px;text-align:center;font-weight:700;font-size:15px;letter-spacing:.02em}
+#ptitle small{display:block;font-weight:400;font-size:10.5px;color:var(--soft);letter-spacing:.06em}
+.today-btn{padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-size:12.5px;color:var(--soft)}
+.today-btn:hover{color:var(--ink)}
+#savestat{font-size:10.5px;color:var(--dim);letter-spacing:.08em;min-width:52px;text-align:right}
+
+/* ---------- layout ---------- */
+main{padding:14px 16px 30px;max-width:1560px;margin:0 auto}
+.scroll{overflow-x:auto}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;min-width:0}
+.lbl{font-size:10px;letter-spacing:.16em;color:var(--soft);font-weight:700;text-transform:uppercase}
+.lbl-sub{font-size:11.5px;color:var(--soft);margin:1px 0 8px}
+
+/* ---------- checklist ---------- */
+.cl{display:flex;flex-direction:column;gap:2px}
+.cl-row{display:flex;align-items:center;gap:7px;padding:2px 0;border-bottom:1px solid var(--faint)}
+.cl-chk{width:15px;height:15px;flex:none;border:1.5px solid var(--dim);border-radius:4px;position:relative}
+.cl-row.done .cl-chk{background:var(--soft);border-color:var(--soft)}
+.cl-row.done .cl-chk::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 1.5px 1.5px 0;transform:rotate(42deg)}
+.cl-txt{flex:1;min-width:0;font-size:13px;padding:2px 0}
+.cl-row.done .cl-txt{color:var(--dim);text-decoration:line-through}
+.cl-del{color:transparent;font-size:15px;line-height:1;padding:0 2px;flex:none}
+.cl-row:hover .cl-del{color:var(--dim)}
+.cl-del:hover{color:var(--soft)}
+.cl-add{font-size:12.5px;padding:5px 0 3px;color:var(--ink);border-bottom:1px dashed var(--faint)}
+
+/* ---------- textareas ---------- */
+.ta{width:100%;resize:none;font-size:13px;padding:0 2px;line-height:26px;flex:1;
+  background-image:repeating-linear-gradient(transparent,transparent 25px,var(--faint) 25px,var(--faint) 26px)}
+.ta-grid{width:100%;resize:none;font-size:12.5px;line-height:20px;padding:0 1px;flex:1;
+  background-image:linear-gradient(var(--faint) 1px,transparent 1px),linear-gradient(90deg,var(--faint) 1px,transparent 1px);
+  background-size:20px 20px}
+
+/* ---------- monthly ---------- */
+.v-month{display:grid;grid-template-columns:262px 1fr;gap:12px;align-items:stretch}
+.m-memo{flex:0 0 44%;min-height:190px;display:flex;flex-direction:column;margin:4px 0 16px}
+.cal-card{padding:8px}
+.cal{display:grid;grid-template-columns:36px repeat(7,1fr);flex:1}
+.cal-h{padding:7px 4px;text-align:center;font-size:11px;letter-spacing:.12em;color:var(--soft);border-bottom:1px solid var(--line)}
+.cal-w{display:flex;align-items:flex-start;justify-content:center;padding-top:9px;font-size:10px;letter-spacing:.05em;color:var(--soft);
+  border-bottom:1px solid var(--faint);border-right:1px solid var(--line);background:var(--mist2);border-radius:0}
+.cal-w:hover{color:var(--ink);background:var(--mist)}
+.cal-w.dim{color:var(--dim)}
+.cal-d{min-height:98px;padding:5px 6px 7px;border-bottom:1px solid var(--faint);border-right:1px solid var(--faint);
+  font-size:12.5px;display:flex;flex-direction:column;gap:2px}
+.cal-d:nth-child(9n){border-right:none}
+.cal-d.out{color:var(--dim)}
+.cal-d .n{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:999px;align-self:flex-start}
+.cal-d .n:hover{background:var(--mist)}
+.cal-d.today .n{background:var(--ink);color:#fff;font-weight:600}
+.cal-d.sun .n{color:#a08e8e}
+.cal-d.sun.out .n{color:#d8cfcf}
+.cal-ev{display:flex;align-items:center;gap:3px;min-width:0}
+.cal-ev input{flex:1;min-width:0;font-size:10.5px;padding:1px;border-bottom:1px dashed var(--faint)}
+.cal-ev input:focus{border-bottom-color:var(--dim)}
+.cal-ev .gcal{display:none;font-size:8.5px;line-height:13px;color:var(--dim);border:1px solid var(--line);border-radius:3px;padding:0 3px;text-decoration:none;flex:none}
+.cal-ev.has .gcal{display:inline-block}
+.cal-ev .gcal:hover{color:var(--ink);border-color:var(--dim)}
+.cal-hint{font-size:10.5px;color:var(--dim);text-align:right;padding:6px 4px 0}
+
+/* ---------- weekly ---------- */
+.v-week{display:grid;grid-template-columns:236px repeat(7,minmax(128px,1fr));gap:8px;min-width:1240px;align-items:stretch}
+.wk-left .memo-box{height:196px;display:flex;flex-direction:column;margin:4px 0 14px}
+.wk-day{padding:0;overflow:hidden}
+.wk-day.today{border-color:var(--soft);box-shadow:0 0 0 1px var(--soft) inset}
+.wk-head{width:100%;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--mist2);border-radius:0;
+  display:flex;align-items:baseline;gap:6px}
+.wk-head:hover{background:var(--mist)}
+.wk-head b{font-size:16px;font-weight:700}
+.wk-head span{font-size:11px;color:var(--soft);letter-spacing:.08em}
+.wk-head .go{margin-left:auto;font-size:10px;color:var(--dim)}
+.wk-memo{flex:1;min-height:104px;display:flex;flex-direction:column;padding:7px 8px;border-bottom:1px solid var(--line)}
+.wk-tasks{flex:2;display:flex;flex-direction:column;padding:7px 9px 9px}
+.wk-tasks .cl-txt,.wk-tasks .cl-add{font-size:12px}
+
+/* ---------- daily ---------- */
+.v-day{display:grid;grid-template-columns:1.05fr .95fr 1fr 1fr;gap:12px;min-width:1080px;align-items:stretch}
+.d-col{display:flex;flex-direction:column;gap:12px}
+.goal-box{min-height:118px}
+.goal-box .ta{min-height:78px}
+.d-todo{flex:1}
+.tt{display:flex;flex-direction:column;margin-top:6px;border-top:1px solid var(--line)}
+.tt-row{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}
+.tt-hdr{background:var(--mist2)}
+.tt-half-lbl{flex:1;font-size:9px;letter-spacing:.06em;color:var(--dim);padding:3px 8px 2px}
+.tt-time{width:40px;flex:none;font-size:10px;color:var(--soft);padding:8px 5px 0 3px;border-right:1px solid var(--line);
+  font-variant-numeric:tabular-nums;letter-spacing:.03em}
+.tt-cell{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;padding:1px 3px}
+.tt-cell.h2{border-left:1px dashed var(--line)}
+.tt-cell.now{background:var(--mist)}
+.tt-line1{display:flex;align-items:center;gap:2px}
+.tt-in{flex:1;min-width:0;padding:2px 0 2px 5px;font-size:12.5px;min-height:26px}
+.st-ok .tt-in{background:linear-gradient(transparent 18%,rgba(120,178,255,.38) 18%,rgba(120,178,255,.38) 86%,transparent 86%)}
+.st-meh .tt-in{background:linear-gradient(transparent 18%,rgba(255,222,89,.45) 18%,rgba(255,222,89,.45) 86%,transparent 86%)}
+.st-other .tt-in{text-decoration:line-through;color:var(--soft)}
+.tt-st{width:14px;height:14px;flex:none;border:1.5px solid var(--dim);border-radius:50%;opacity:.35;transition:opacity .12s}
+.tt-cell:hover .tt-st{opacity:1}
+.st-ok .tt-st{opacity:1;background:#7db2ff;border-color:#7db2ff}
+.st-meh .tt-st{opacity:1;background:#ffde59;border-color:#f5c400}
+.st-other .tt-st{opacity:1;background:var(--soft);border-color:var(--soft)}
+.tt-actual{font-size:11.5px;padding:0 0 3px 5px;color:var(--ink)}
+.split{flex:1;display:flex;flex-direction:column;gap:12px}
+.split .card{flex:1}
+
+/* ---------- backup dialog ---------- */
+.dlg-back{position:fixed;inset:0;background:rgba(60,60,66,.35);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.dlg-back[hidden]{display:none}
+.dlg{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px;width:min(560px,100%);display:flex;flex-direction:column;gap:10px;box-shadow:0 12px 40px rgba(0,0,0,.12)}
+.dlg-hint{font-size:11.5px;color:var(--soft);line-height:1.5}
+#dlg-ta{height:190px;border:1px solid var(--line);border-radius:8px;padding:8px;font-size:11px;font-family:ui-monospace,Menlo,monospace;resize:vertical;background:var(--mist2)}
+.dlg-btns{display:flex;gap:6px;flex-wrap:wrap}
+.dlg-btns button{padding:7px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-size:12.5px}
+.dlg-btns button:hover{background:var(--mist)}
+
+/* ---------- responsive ---------- */
+@media (max-width:860px){
+  .v-month{grid-template-columns:1fr}
+  .v-day{grid-template-columns:1fr;min-width:0}
+  .v-week{min-width:1240px}
+  #ptitle{min-width:0}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><b>PLANNER</b><span>MONTHLY · WEEKLY · DAILY</span></div>
+  <nav class="tabs" aria-label="보기 전환">
+    <button data-v="month">먼슬리</button>
+    <button data-v="week">위클리</button>
+    <button data-v="day">데일리</button>
+  </nav>
+  <div class="nav">
+    <button class="arw" id="prev" aria-label="이전">‹</button>
+    <div id="ptitle"></div>
+    <button class="arw" id="next" aria-label="다음">›</button>
+    <button class="today-btn" id="today">오늘</button>
+    <button class="today-btn" id="gd" title="Google Drive와 연결해 기기 간 자동 동기화">Drive 연결</button>
+    <button class="today-btn" id="exp" title="백업 내보내기 (파일/복사)">백업</button>
+    <button class="today-btn" id="imp" title="백업 파일 불러오기">복원</button>
+    <input type="file" id="impfile" accept="application/json,.json" hidden>
+    <span id="savestat"></span>
+  </div>
+</header>
+<main id="app"></main>
+<div id="dlg" class="dlg-back" hidden>
+  <div class="dlg">
+    <div class="lbl">백업 데이터 (JSON)</div>
+    <div class="dlg-hint">다른 기기로 옮기기: <b>파일로 저장</b> 또는 <b>복사</b> → 그 기기에서 <b>복원</b>으로 파일을 열거나, 이 창에 붙여넣고 <b>이 내용으로 복원</b>을 누르세요.</div>
+    <textarea id="dlg-ta" spellcheck="false"></textarea>
+    <div class="dlg-btns">
+      <button id="dlg-dl">파일로 저장</button>
+      <button id="dlg-copy">복사</button>
+      <button id="dlg-restore">이 내용으로 복원</button>
+      <button id="dlg-gout">구글 연결 해제</button>
+      <button id="dlg-close">닫기</button>
+    </div>
+  </div>
+</div>
+<script>
+/* ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+   [구글 드라이브 동기화 설정]
+   "구글드라이브_연동_가이드" 문서를 따라 발급받은
+   OAuth 클라이언트 ID를 아래 따옴표 안에 붙여넣으세요.
+   예) const GDRIVE_CLIENT_ID = '1234567890-abc.apps.googleusercontent.com';
+   ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★ */
+const GDRIVE_CLIENT_ID = '';
+
+/* ============ 저장 (독립형)
+   1순위: 이 기기의 브라우저 로컬 저장소 (다운로드한 파일·직접 호스팅 시)
+   2순위: claude.ai 아티팩트 저장소 (클로드 안에서 열었을 때)
+   3순위: 메모리 (둘 다 없으면 이 화면에서만 임시 유지)          ============ */
+const mem = {};
+let LS = null, backend = 'mem';
+try{
+  const t = window.localStorage;
+  t.setItem('pl:__probe','1'); t.removeItem('pl:__probe');
+  LS = t; backend = 'local';
+}catch(e){
+  try{ if(window.storage) backend = 'claude'; }catch(e2){}
+}
+const BK_LABEL = {local:'이 기기의 브라우저에 저장됩니다', claude:'Claude 계정 저장소에 저장됩니다', mem:'창을 닫으면 사라집니다 — 백업을 이용하세요'};
+function setStat(s){
+  const el = document.getElementById('savestat');
+  el.title = BK_LABEL[backend];
+  if(s==='saving'){ el.textContent = '저장 중…'; return; }
+  if(s==='fail'){ el.textContent = '저장 실패'; return; }
+  el.textContent = backend==='mem' ? '임시 저장' : '저장됨';
+}
+async function load(key, def){
+  const k = 'pl:'+key;
+  if(mem[k]) return JSON.parse(mem[k]);  // 이 세션에서 수정한 최신값 우선
+  try{
+    if(backend==='local'){
+      const v = LS.getItem(k);
+      if(v) return JSON.parse(v);
+    }else if(backend==='claude'){
+      const r = await window.storage.get(k);
+      if(r && r.value) return JSON.parse(r.value);
+    }
+  }catch(e){ /* 키 없음 → 기본값 */ }
+  return JSON.parse(JSON.stringify(def));
+}
+const timers = {};
+function save(key, data){
+  const k = 'pl:'+key;
+  mem[k] = JSON.stringify(data);
+  tsMap[k] = Date.now();
+  rawSetSync(TS_KEY, JSON.stringify(tsMap));
+  gdriveScheduleSync();
+  setStat('saving');
+  clearTimeout(timers[k]);
+  timers[k] = setTimeout(async () => {
+    try{
+      if(backend==='local'){ LS.setItem(k, mem[k]); setStat('saved'); }
+      else if(backend==='claude'){ await window.storage.set(k, mem[k]); setStat('saved'); }
+      else setStat('mem');
+    }catch(e){ setStat('fail'); }
+  }, 500);
+}
+
+/* ============ 백업 / 복원 ============ */
+async function collectAll(){
+  const keys = new Set(Object.keys(mem));
+  try{
+    if(backend==='local'){
+      for(let i=0;i<LS.length;i++){ const k = LS.key(i); if(k && k.indexOf('pl:')===0) keys.add(k); }
+    }else if(backend==='claude'){
+      const r = await window.storage.list('pl:');
+      (r && r.keys ? r.keys : []).forEach(k => keys.add(k));
+    }
+  }catch(e){}
+  for(const k of Array.from(keys)){ if(k.indexOf('pl:__') === 0) keys.delete(k); }
+  const data = {};
+  for(const k of keys){
+    let v = mem[k];
+    if(v == null){
+      try{
+        if(backend==='local') v = LS.getItem(k);
+        else if(backend==='claude'){ const r = await window.storage.get(k); v = r && r.value; }
+      }catch(e){}
+    }
+    if(v){ try{ data[k] = JSON.parse(v); }catch(e){} }
+  }
+  return {app:'planner', version:1, exported:new Date().toISOString(), data};
+}
+async function applyBackup(obj){
+  const data = obj && obj.data && typeof obj.data === 'object' ? obj.data
+             : (obj && typeof obj === 'object' ? obj : null);
+  const ks = data ? Object.keys(data).filter(k => k.indexOf('pl:')===0) : [];
+  if(!ks.length){ alert('플래너 백업 데이터를 찾지 못했어요. 파일/내용을 확인해주세요.'); return; }
+  if(!confirm(ks.length + '개 항목을 불러옵니다. 같은 날짜·주·월의 기존 내용은 백업 내용으로 바뀌어요. 계속할까요?')) return;
+  for(const k of ks){
+    const v = JSON.stringify(data[k]);
+    mem[k] = v;
+    tsMap[k] = Date.now();
+    try{
+      if(backend==='local') LS.setItem(k, v);
+      else if(backend==='claude') await window.storage.set(k, v);
+    }catch(e){}
+  }
+  rawSetSync(TS_KEY, JSON.stringify(tsMap));
+  gdriveScheduleSync();
+  setStat('saved');
+  render();
+  alert('복원 완료!');
+}
+const dlg = document.getElementById('dlg'), dlgTa = document.getElementById('dlg-ta');
+document.getElementById('exp').onclick = async () => {
+  dlgTa.value = JSON.stringify(await collectAll(), null, 1);
+  dlg.hidden = false;
+};
+document.getElementById('dlg-dl').onclick = () => {
+  try{
+    const blob = new Blob([dlgTa.value], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '플래너백업_' + iso(todayD()) + '.json';
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  }catch(e){ alert('이 환경에서는 파일 저장이 막혀 있어요. [복사] 버튼으로 내용을 복사해 보관해주세요.'); }
+};
+document.getElementById('dlg-copy').onclick = async () => {
+  try{ await navigator.clipboard.writeText(dlgTa.value); alert('복사됐어요!'); }
+  catch(e){
+    dlgTa.focus(); dlgTa.select();
+    try{ document.execCommand('copy'); alert('복사됐어요!'); }
+    catch(e2){ alert('자동 복사가 막혀 있어요. 내용을 길게 눌러 직접 복사해주세요.'); }
+  }
+};
+document.getElementById('dlg-restore').onclick = () => {
+  try{ applyBackup(JSON.parse(dlgTa.value)); dlg.hidden = true; }
+  catch(e){ alert('JSON 형식이 올바르지 않아요. 백업 내용을 그대로 붙여넣었는지 확인해주세요.'); }
+};
+document.getElementById('dlg-close').onclick = () => { dlg.hidden = true; };
+document.getElementById('imp').onclick = () => { document.getElementById('impfile').click(); };
+document.getElementById('impfile').onchange = (e) => {
+  const f = e.target.files[0];
+  if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{ applyBackup(JSON.parse(rd.result)); }
+    catch(err){ alert('파일을 읽지 못했어요. 플래너 백업(JSON) 파일인지 확인해주세요.'); }
+  };
+  rd.readAsText(f);
+  e.target.value = '';
+};
+
+/* ============ Google Drive 동기화 ============
+   데이터는 드라이브의 '앱 전용 숨김 공간(appDataFolder)'에
+   planner-data.json 하나로 저장됩니다. 일반 드라이브 파일에는 접근하지 않아요.
+   병합 규칙: 항목(날짜/주/월)별로 더 최근에 수정한 쪽이 이깁니다. */
+const TS_KEY = 'pl:__ts';
+let tsMap = {};
+function rawSetSync(k, v){
+  mem[k] = v;
+  try{
+    if(backend==='local') LS.setItem(k, v);
+    else if(backend==='claude') window.storage.set(k, v);
+  }catch(e){}
+}
+(async () => {
+  try{
+    let v = null;
+    if(backend==='local') v = LS.getItem(TS_KEY);
+    else if(backend==='claude'){ const r = await window.storage.get(TS_KEY); v = r && r.value; }
+    if(v) tsMap = JSON.parse(v) || {};
+  }catch(e){ tsMap = {}; }
+})();
+
+const G = { token:null, fileId:null, timer:null, busy:false, connected:false };
+const gdBtn = document.getElementById('gd');
+function setGBtn(state){
+  if(state==='busy'){ gdBtn.textContent = '동기화 중…'; return; }
+  if(state==='fail'){ gdBtn.textContent = 'Drive !'; gdBtn.title = '동기화 실패 — 다시 눌러 재시도'; return; }
+  gdBtn.textContent = G.connected ? 'Drive ✓' : 'Drive 연결';
+  gdBtn.title = G.connected ? '눌러서 지금 동기화' : 'Google Drive와 연결해 기기 간 자동 동기화';
+}
+function loadGsi(){
+  return new Promise((res, rej) => {
+    if(window.google && google.accounts && google.accounts.oauth2) return res();
+    const sc = document.createElement('script');
+    sc.src = 'https://accounts.google.com/gsi/client';
+    sc.onload = () => res();
+    sc.onerror = () => rej(new Error('gsi'));
+    document.head.append(sc);
+  });
+}
+let tokenClient = null;
+async function gConnect(){
+  if(!GDRIVE_CLIENT_ID){
+    alert('구글 드라이브 동기화를 쓰려면 먼저 1회 설정이 필요해요.\n함께 드린 "구글드라이브_연동_가이드"를 따라 클라이언트 ID를 발급받아,\n이 파일 상단의 GDRIVE_CLIENT_ID에 붙여넣어 주세요.');
+    return false;
+  }
+  try{ await loadGsi(); }
+  catch(e){
+    alert('구글 로그인 스크립트를 불러올 수 없어요.\n(클로드 미리보기 안에서는 차단됩니다 — 가이드대로 호스팅한 주소에서 열어주세요)');
+    return false;
+  }
+  if(!tokenClient){
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GDRIVE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/drive.appdata',
+      callback: () => {}
+    });
+  }
+  const tok = await new Promise(res => {
+    tokenClient.callback = t => res(t);
+    try{ tokenClient.requestAccessToken({prompt: ''}); }catch(e){ res(null); }
+  });
+  if(tok && tok.access_token){
+    G.token = tok.access_token; G.connected = true;
+    setGBtn();
+    return true;
+  }
+  return false;
+}
+async function gFetch(url, opts = {}){
+  opts.headers = Object.assign({Authorization: 'Bearer ' + G.token}, opts.headers || {});
+  let r = await fetch(url, opts);
+  if(r.status === 401){
+    if(!await gConnect()) throw new Error('auth');
+    opts.headers.Authorization = 'Bearer ' + G.token;
+    r = await fetch(url, opts);
+  }
+  if(!r.ok) throw new Error('drive ' + r.status);
+  return r;
+}
+async function gFindFile(){
+  const q = encodeURIComponent("name='planner-data.json'");
+  const r = await gFetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=' + q + '&fields=files(id)');
+  const j = await r.json();
+  return j.files && j.files[0] ? j.files[0].id : null;
+}
+async function gUpload(id, obj){
+  const body = JSON.stringify(obj);
+  if(id){
+    await gFetch('https://www.googleapis.com/upload/drive/v3/files/' + id + '?uploadType=media',
+      {method:'PATCH', headers:{'Content-Type':'application/json'}, body});
+    return id;
+  }
+  const boundary = 'plnr' + Date.now();
+  const meta = JSON.stringify({name:'planner-data.json', parents:['appDataFolder']});
+  const mp = '--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + meta +
+             '\r\n--' + boundary + '\r\nContent-Type: application/json\r\n\r\n' + body +
+             '\r\n--' + boundary + '--';
+  const r = await gFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+    {method:'POST', headers:{'Content-Type':'multipart/related; boundary=' + boundary}, body: mp});
+  return (await r.json()).id;
+}
+async function gSync(){
+  if(!G.connected){ if(!await gConnect()) return; }
+  if(G.busy) return;
+  G.busy = true; setGBtn('busy');
+  try{
+    if(!G.fileId) G.fileId = await gFindFile();
+    let remote = null;
+    if(G.fileId){
+      try{ remote = await (await gFetch('https://www.googleapis.com/drive/v3/files/' + G.fileId + '?alt=media')).json(); }
+      catch(e){ remote = null; }
+    }
+    const localAll = (await collectAll()).data;
+    const rData = (remote && remote.data) || {};
+    const rTs = (remote && remote.ts) || {};
+    const merged = {}, mTs = {};
+    const keys = new Set(Object.keys(localAll).concat(Object.keys(rData)));
+    let pulled = 0;
+    for(const k of keys){
+      const lt = tsMap[k] || 0, rt = rTs[k] || 0;
+      if(rt > lt && rData[k] !== undefined){
+        merged[k] = rData[k]; mTs[k] = rt;
+        const v = JSON.stringify(rData[k]);
+        mem[k] = v; tsMap[k] = rt; pulled++;
+        try{
+          if(backend==='local') LS.setItem(k, v);
+          else if(backend==='claude') await window.storage.set(k, v);
+        }catch(e){}
+      }else if(localAll[k] !== undefined){
+        merged[k] = localAll[k]; mTs[k] = lt || Date.now();
+      }else{
+        merged[k] = rData[k]; mTs[k] = rt;
+      }
+    }
+    rawSetSync(TS_KEY, JSON.stringify(tsMap));
+    G.fileId = await gUpload(G.fileId, {app:'planner', version:2, updated:new Date().toISOString(), ts:mTs, data:merged});
+    setGBtn();
+    if(pulled) render();
+  }catch(e){
+    setGBtn('fail');
+  }finally{
+    G.busy = false;
+  }
+}
+function gdriveScheduleSync(){
+  if(!G.connected) return;
+  clearTimeout(G.timer);
+  G.timer = setTimeout(() => gSync(), 4000);
+}
+gdBtn.onclick = () => gSync();
+document.getElementById('dlg-gout').onclick = () => {
+  if(!G.connected){ alert('현재 구글에 연결되어 있지 않아요.'); return; }
+  try{ if(window.google) google.accounts.oauth2.revoke(G.token, () => {}); }catch(e){}
+  G.token = null; G.connected = false; G.fileId = null;
+  setGBtn();
+  alert('구글 드라이브 연결이 해제됐어요. 데이터는 이 기기와 드라이브에 그대로 남아 있습니다.');
+};
+
+/* ============ 날짜 유틸 ============ */
+const p2 = n => String(n).padStart(2,'0');
+const iso = d => `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+const monday = d => { const x = new Date(d.getFullYear(),d.getMonth(),d.getDate()); x.setDate(x.getDate() - (x.getDay()+6)%7); return x; };
+const addD = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const sameD = (a,b) => iso(a)===iso(b);
+const WD = ['월','화','수','목','금','토','일'];
+function gcalUrl(title, d){
+  const a = iso(d).replace(/-/g,''), b = iso(addD(d,1)).replace(/-/g,'');
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(title) + '&dates=' + a + '/' + b;
+}
+const todayD = () => { const t = new Date(); return new Date(t.getFullYear(),t.getMonth(),t.getDate()); };
+function weekLabel(mon){
+  const th = addD(mon,3), sun = addD(mon,6);
+  const n = Math.ceil(th.getDate()/7);
+  return { title:`${th.getFullYear()}년 ${th.getMonth()+1}월 ${n}주차`,
+           range:`${mon.getMonth()+1}.${mon.getDate()} – ${sun.getMonth()+1}.${sun.getDate()}`,
+           short:`${n}주`, inMonth: th };
+}
+
+/* ============ 공용 컴포넌트 ============ */
+function el(tag, cls, txt){ const e = document.createElement(tag); if(cls) e.className = cls; if(txt!=null) e.textContent = txt; return e; }
+
+function checklist(items, onChange, ph){
+  const wrap = el('div','cl');
+  function draw(focusAdd){
+    wrap.innerHTML = '';
+    items.forEach((it,i) => {
+      const row = el('div','cl-row'+(it.d?' done':''));
+      const chk = el('button','cl-chk'); chk.title = '완료 표시';
+      chk.onclick = () => { it.d = !it.d; onChange(); draw(); };
+      const txt = el('input','cl-txt'); txt.value = it.t;
+      txt.oninput = () => { it.t = txt.value; onChange(); };
+      const del = el('button','cl-del','×'); del.title = '삭제';
+      del.onclick = () => { items.splice(i,1); onChange(); draw(); };
+      row.append(chk, txt, del);
+      wrap.append(row);
+    });
+    const add = el('input','cl-add');
+    add.placeholder = ph || '+ 추가';
+    add.onkeydown = e => {
+      if(e.key==='Enter' && add.value.trim()){
+        items.push({t:add.value.trim(), d:false});
+        onChange(); draw(true);
+      }
+    };
+    wrap.append(add);
+    if(focusAdd) add.focus();
+  }
+  draw();
+  return wrap;
+}
+
+function taBox(cls, value, onInput, ph){
+  const t = el('textarea', cls);
+  t.value = value || '';
+  t.placeholder = ph || '';
+  t.oninput = () => onInput(t.value);
+  return t;
+}
+
+/* ============ 상태 ============ */
+let view = 'month';
+let cur = todayD();
+const app = document.getElementById('app');
+
+function setView(v, d){
+  view = v;
+  if(d) cur = d;
+  render();
+}
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => setView(b.dataset.v));
+document.getElementById('today').onclick = () => setView(view, todayD());
+document.getElementById('prev').onclick = () => step(-1);
+document.getElementById('next').onclick = () => step(1);
+function step(dir){
+  if(view==='month') cur = new Date(cur.getFullYear(), cur.getMonth()+dir, 1);
+  else if(view==='week') cur = addD(cur, 7*dir);
+  else cur = addD(cur, dir);
+  render();
+}
+
+function setTitle(){
+  const t = document.getElementById('ptitle');
+  if(view==='month'){
+    t.innerHTML = `${cur.getFullYear()}년 ${cur.getMonth()+1}월<small>MONTHLY</small>`;
+  }else if(view==='week'){
+    const w = weekLabel(monday(cur));
+    t.innerHTML = `${w.title}<small>${w.range} · WEEKLY</small>`;
+  }else{
+    t.innerHTML = `${cur.getMonth()+1}월 ${cur.getDate()}일 (${WD[(cur.getDay()+6)%7]})<small>${cur.getFullYear()} · DAILY</small>`;
+  }
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.v===view));
+}
+
+/* ============ 먼슬리 ============ */
+async function renderMonthly(){
+  const y = cur.getFullYear(), m = cur.getMonth();
+  const key = `m:${y}-${p2(m+1)}`;
+  const data = await load(key, {memo:'', todos:[], events:{}});
+  if(!data.events || typeof data.events !== 'object') data.events = {};
+  const wrap = el('div','v-month');
+
+  const left = el('div','card');
+  left.append(el('div','lbl','Memo'));
+  const mm = el('div','m-memo');
+  mm.append(taBox('ta-grid', data.memo, v => { data.memo = v; save(key,data); }, '이달의 메모'));
+  left.append(mm);
+  left.append(el('div','lbl','Monthly To Do'), el('div','lbl-sub','월간 할 일 · 기도제목'));
+  left.append(checklist(data.todos, () => save(key,data), '+ 목표 추가'));
+  wrap.append(left);
+
+  const calCard = el('div','card cal-card');
+  const cal = el('div','cal');
+  cal.append(el('div','cal-h',''));
+  WD.forEach(w => cal.append(el('div','cal-h', w)));
+
+  const first = new Date(y, m, 1), last = new Date(y, m+1, 0);
+  let rowStart = monday(first);
+  const today = todayD();
+  while(rowStart <= last){
+    const wl = weekLabel(rowStart);
+    const wbtn = el('button','cal-w' + (wl.inMonth.getMonth()===m ? '' : ' dim'), wl.short);
+    wbtn.title = '위클리로 이동';
+    const ws = new Date(rowStart);
+    wbtn.onclick = () => setView('week', ws);
+    cal.append(wbtn);
+    for(let i=0;i<7;i++){
+      const d = addD(rowStart, i);
+      const ds = iso(d);
+      const cell = el('div','cal-d' + (d.getMonth()!==m?' out':'') + (sameD(d,today)?' today':'') + (i===6?' sun':''));
+      const nb = el('button','n', d.getDate());
+      nb.title = '데일리로 이동';
+      nb.onclick = () => setView('day', d);
+      cell.append(nb);
+      if(!Array.isArray(data.events[ds])) data.events[ds] = ['','',''];
+      const evs = data.events[ds];
+      for(let k=0;k<3;k++){
+        const row = el('div','cal-ev' + (evs[k] && evs[k].trim() ? ' has':''));
+        const inp = el('input');
+        inp.value = evs[k] || '';
+        const g = el('a','gcal','G');
+        g.title = 'Google 캘린더에 이 일정 추가';
+        g.target = '_blank'; g.rel = 'noopener';
+        const upd = () => { g.href = gcalUrl(inp.value.trim() || '일정', d); };
+        upd();
+        inp.oninput = () => { evs[k] = inp.value; row.classList.toggle('has', !!inp.value.trim()); upd(); save(key,data); };
+        row.append(inp, g);
+        cell.append(row);
+      }
+      cal.append(cell);
+    }
+    rowStart = addD(rowStart, 7);
+  }
+  calCard.append(cal, el('div','cal-hint','날짜 숫자 → 데일리 · 주차 → 위클리 · G 버튼 → Google 캘린더에 일정 추가'));
+  wrap.append(calCard);
+  return wrap;
+}
+
+/* ============ 위클리 ============ */
+async function renderWeekly(){
+  const mon = monday(cur);
+  const key = `w:${iso(mon)}`;
+  const def = {memo:'', goals:[], days:Array.from({length:7}, () => ({memo:'', tasks:[]}))};
+  const data = await load(key, def);
+  if(!Array.isArray(data.days)) data.days = [];
+  data.days = data.days.map(d => {
+    if(d && (d.am || d.pm || d.ev)) return {memo:d.memo || '', tasks:[...(d.am||[]), ...(d.pm||[]), ...(d.ev||[])]};
+    return {memo:(d && d.memo) || '', tasks:(d && d.tasks) || []};
+  });
+  while(data.days.length < 7) data.days.push({memo:'', tasks:[]});
+
+  const sc = el('div','scroll');
+  const wrap = el('div','v-week');
+
+  const left = el('div','card wk-left');
+  left.append(el('div','lbl','Memo'));
+  const mb = el('div','memo-box');
+  mb.append(taBox('ta-grid', data.memo, v => { data.memo = v; save(key,data); }, '자유롭게 메모하세요'));
+  left.append(mb);
+  left.append(el('div','lbl','Weekly Goals'), el('div','lbl-sub','주간 목표 · 기도제목'));
+  left.append(checklist(data.goals, () => save(key,data), '+ 주간 할 일 추가'));
+  wrap.append(left);
+
+  const today = todayD();
+  for(let i=0;i<7;i++){
+    const d = addD(mon, i);
+    const col = el('div','card wk-day' + (sameD(d,today)?' today':''));
+    const head = el('button','wk-head');
+    head.append(el('b',null,d.getDate()), el('span',null,WD[i]), el('span','go','데일리 ›'));
+    head.onclick = () => setView('day', d);
+    col.append(head);
+    const memoSec = el('div','wk-memo');
+    memoSec.append(taBox('ta-grid', data.days[i].memo, v => { data.days[i].memo = v; save(key,data); }, '메모'));
+    const taskSec = el('div','wk-tasks');
+    taskSec.append(checklist(data.days[i].tasks, () => save(key,data), '+ 할 일'));
+    col.append(memoSec, taskSec);
+    wrap.append(col);
+  }
+  sc.append(wrap);
+  return sc;
+}
+
+/* ============ 데일리 ============ */
+async function renderDaily(){
+  const key = `d:${iso(cur)}`;
+  const data = await load(key, {goal:'', todos:[], time:{}, think:'', improve:'', thanks:''});
+  if(!data.time) data.time = {};
+
+  const sc = el('div','scroll');
+  const wrap = el('div','v-day');
+
+  /* 1열: 목표·다짐 + 할 일 */
+  const c1 = el('div','d-col');
+  const g = el('div','card goal-box');
+  g.append(el('div','lbl','Today’s Word'), el('div','lbl-sub','오늘의 말씀'));
+  g.append(taBox('ta', data.goal, v => { data.goal = v; save(key,data); }, '오늘 붙잡을 말씀 한 구절'));
+  const td = el('div','card d-todo');
+  td.append(el('div','lbl','To Do'), el('div','lbl-sub','하루 할 일'));
+  td.append(checklist(data.todos, () => save(key,data), '+ 할 일 추가'));
+  c1.append(g, td);
+
+  /* 2열: 타임테이블 */
+  const c2 = el('div','card');
+  c2.append(el('div','lbl','Time Table'));
+  const tt = el('div','tt');
+  const hdr = el('div','tt-row tt-hdr');
+  hdr.append(el('div','tt-time',''), el('div','tt-half-lbl','0–30분'), el('div','tt-half-lbl','30–60분'));
+  tt.append(hdr);
+  const now = new Date();
+  const isToday = sameD(cur, todayD());
+  const nowSlot = `${p2(now.getHours())}:${now.getMinutes()<30?'00':'30'}`;
+  const ST = ['','ok','meh','other'];
+  const ST_TIP = {'':'상태 없음','ok':'제대로 함 (파랑)','meh':'애매함 (노랑)','other':'다른 일 함 (취소선 + 수정)'};
+  for(let h=5; h<24; h++){
+    const row = el('div','tt-row');
+    row.append(el('div','tt-time', p2(h)));
+    ['00','30'].forEach((mn, ci) => {
+      const s = `${p2(h)}:${mn}`;
+      let cell = data.time[s];
+      if(!cell || typeof cell === 'string') cell = data.time[s] = {t:(typeof cell==='string'?cell:''), st:'', a:''};
+      const cls = () => 'tt-cell' + (ci?' h2':'') + (cell.st?' st-'+cell.st:'') + (isToday && s===nowSlot ? ' now':'');
+      const box = el('div', cls());
+      const l1 = el('div','tt-line1');
+      const inp = el('input','tt-in');
+      inp.value = cell.t || '';
+      inp.oninput = () => { cell.t = inp.value; save(key,data); };
+      const st = el('button','tt-st');
+      st.title = '클릭해 상태 변경 · ' + ST_TIP[cell.st || ''];
+      st.onclick = () => {
+        cell.st = ST[(ST.indexOf(cell.st || '') + 1) % ST.length];
+        save(key,data);
+        box.className = cls();
+        st.title = '클릭해 상태 변경 · ' + ST_TIP[cell.st || ''];
+        let act = box.querySelector('.tt-actual');
+        if(cell.st === 'other' && !act){
+          act = el('input','tt-actual');
+          act.placeholder = '→ 실제 한 일';
+          act.value = cell.a || '';
+          act.oninput = () => { cell.a = act.value; save(key,data); };
+          box.append(act); act.focus();
+        }else if(cell.st !== 'other' && act){ act.remove(); }
+      };
+      l1.append(inp, st);
+      box.append(l1);
+      if(cell.st === 'other'){
+        const act = el('input','tt-actual');
+        act.placeholder = '→ 실제 한 일';
+        act.value = cell.a || '';
+        act.oninput = () => { cell.a = act.value; save(key,data); };
+        box.append(act);
+      }
+      row.append(box);
+    });
+    tt.append(row);
+  }
+  c2.append(tt);
+
+  /* 3열: 생각 정리 */
+  const c3 = el('div','card');
+  c3.append(el('div','lbl','Ideas · Prayer · Memo'), el('div','lbl-sub','아이디어 · 기도제목 · 메모'));
+  c3.append(taBox('ta-grid', data.think, v => { data.think = v; save(key,data); }, '아이디어, 기도제목, 메모'));
+
+  /* 4열: 고려할 점 / 회고 */
+  const c4 = el('div','split');
+  const up = el('div','card');
+  up.append(el('div','lbl','Review · Improve'), el('div','lbl-sub','개선할 점'));
+  up.append(taBox('ta', data.improve, v => { data.improve = v; save(key,data); }, '오늘 더 나아질 수 있는 점'));
+  const dn = el('div','card');
+  dn.append(el('div','lbl','Review · Gratitude'), el('div','lbl-sub','감사한 점'));
+  dn.append(taBox('ta', data.thanks, v => { data.thanks = v; save(key,data); }, '오늘 감사했던 순간들'));
+  c4.append(up, dn);
+
+  wrap.append(c1, c2, c3, c4);
+  sc.append(wrap);
+  return sc;
+}
+
+/* ============ 렌더 ============ */
+let renderSeq = 0;
+async function render(){
+  const seq = ++renderSeq;
+  setTitle();
+  let node;
+  if(view==='month') node = await renderMonthly();
+  else if(view==='week') node = await renderWeekly();
+  else node = await renderDaily();
+  if(seq !== renderSeq) return; // 더 최신 렌더가 시작됨
+  app.innerHTML = '';
+  app.append(node);
+}
+render();
+</script>
+</body>
+</html>
